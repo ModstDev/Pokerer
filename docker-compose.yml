@@ -1,0 +1,17 @@
+services:
+  mariadb:
+    image: mariadb:12
+    container_name: poker-platform-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: poker
+      MARIADB_USER: poker
+      MARIADB_PASSWORD: poker
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:
