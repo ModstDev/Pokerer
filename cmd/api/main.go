@@ -2,10 +2,12 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/ModstDev/Pokerer/internal/app"
 	"github.com/ModstDev/Pokerer/internal/config"
 	"github.com/ModstDev/Pokerer/internal/database"
+	"github.com/ModstDev/Pokerer/internal/httpapi"
 )
 
 func main() {
@@ -27,7 +29,12 @@ func main() {
 	defer db.Close()
 
 	application := app.New(db)
-	_ = application
 
-	log.Println("database connection established")
+	server := httpapi.NewServer(application.Auth)
+
+	log.Println("server listening on :8080")
+
+	if err := http.ListenAndServe(":8080", server.Handler()); err != nil {
+		log.Fatalf("server stopped: %v", err)
+	}
 }
