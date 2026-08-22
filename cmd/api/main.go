@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/ModstDev/Pokerer/internal/app"
 	"github.com/ModstDev/Pokerer/internal/config"
 	"github.com/ModstDev/Pokerer/internal/database"
 )
@@ -24,6 +25,9 @@ func main() {
 		log.Fatalf("connecting to database: %v", err)
 	}
 	defer db.Close()
+
+	application := app.New(db)
+	_ = application
 
 	log.Println("database connection established")
 }
