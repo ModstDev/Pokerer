@@ -30,7 +30,10 @@ func main() {
 
 	application := app.New(db, cfg.JWT.Secret, cfg.JWT.Issuer)
 
-	server := httpapi.NewServer(application.Auth)
+	server := httpapi.NewServer(
+		application.Auth,
+		application.Token,
+	)
 
 	log.Println("server listening on :8080")
 

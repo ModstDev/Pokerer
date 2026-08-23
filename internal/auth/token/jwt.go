@@ -55,7 +55,7 @@ func (j *JWT) Validate(tokenString string) (string, error) {
 	}
 
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
-	if !ok || token.Valid {
+	if !ok || !token.Valid {
 		return "", fmt.Errorf("invalid token")
 	}
 

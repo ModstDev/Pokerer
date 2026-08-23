@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/ModstDev/Pokerer/internal/auth"
 )
@@ -18,6 +19,16 @@ type userResponse struct {
 	Username  string `json:"username"`
 	Email     string `json:"email"`
 	CreatedAt string `json:"created_at"`
+}
+
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type loginResponse struct {
+	AccessToken string       `json:"access_token"`
+	User        userResponse `json:"user"`
 }
 
 func (s *Server) register(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +55,38 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, response)
+}
+
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	var req loginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	result, err := s.authService.Login(r.Context(), auth.LoginInput{
+		Email:    req.Email,
+		Password: req.Password,
+	},
+		s.tokenGenerator,
+	)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	response := loginResponse{
+		AccessToken: result.AccessToken,
+		User: userResponse{
+			ID:        result.User.ID,
+			Username:  result.User.Username,
+			Email:     result.User.Email,
+			CreatedAt: result.User.CreatedAt.Format(time.RFC3339),
+		},
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

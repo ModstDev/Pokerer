@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/ModstDev/Pokerer/internal/auth/token"
 	database "github.com/ModstDev/Pokerer/internal/database/generated"
 	"github.com/ModstDev/Pokerer/internal/repository"
 )
@@ -26,6 +28,16 @@ type RegisterInput struct {
 	Username string
 	Email    string
 	Password string
+}
+
+type LoginInput struct {
+	Email    string
+	Password string
+}
+
+type LoginResult struct {
+	User        database.User
+	AccessToken string
 }
 
 func (s *Service) Register(ctx context.Context, input RegisterInput) (database.User, error) {
@@ -76,4 +88,39 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (database.U
 	}
 
 	return user, nil
+}
+
+func (s *Service) Login(ctx context.Context, input LoginInput, tokenGenerator *token.JWT) (LoginResult, error) {
+	email := strings.ToLower(strings.TrimSpace(input.Email))
+
+	if email == "" {
+		return LoginResult{}, fmt.Errorf("email is required")
+	}
+
+	if input.Password == "" {
+		return LoginResult{}, fmt.Errorf("password is required")
+	}
+
+	user, err := s.users.GetByEmail(ctx, email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return LoginResult{}, fmt.Errorf("invalid email or password")
+		}
+
+		return LoginResult{}, fmt.Errorf("getting user: %w", err)
+	}
+
+	if !CheckPassword(input.Password, user.PasswordHash) {
+		return LoginResult{}, fmt.Errorf("invalid email or password")
+	}
+
+	accessToken, err := tokenGenerator.Generate(user.ID, 15*time.Minute)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("generating access token: %w", err)
+	}
+
+	return LoginResult{
+		User:        user,
+		AccessToken: accessToken,
+	}, nil
 }
