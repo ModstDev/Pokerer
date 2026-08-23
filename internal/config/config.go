@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	Database DatabaseConfig
+	JWT      JWTConfig
 }
 
 type DatabaseConfig struct {
@@ -17,6 +18,11 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	Name     string
+}
+
+type JWTConfig struct {
+	Secret string
+	Issuer string
 }
 
 func Load() (Config, error) {
@@ -30,6 +36,10 @@ func Load() (Config, error) {
 			User:     os.Getenv("DB_USER"),
 			Password: os.Getenv("DB_PASSWORD"),
 			Name:     os.Getenv("DB_NAME"),
+		},
+		JWT: JWTConfig{
+			Secret: os.Getenv("JWT_SECRET"),
+			Issuer: os.Getenv("JWT_ISSUER"),
 		},
 	}
 
@@ -51,6 +61,14 @@ func Load() (Config, error) {
 
 	if cfg.Database.Name == "" {
 		return Config{}, fmt.Errorf("DB_NAME is required")
+	}
+
+	if cfg.JWT.Secret == "" {
+		return Config{}, fmt.Errorf("JWT_SECRET is required")
+	}
+
+	if cfg.JWT.Issuer == "" {
+		return Config{}, fmt.Errorf("JWT_ISSUER is required")
 	}
 
 	return cfg, nil

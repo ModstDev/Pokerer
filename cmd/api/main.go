@@ -28,7 +28,7 @@ func main() {
 	}
 	defer db.Close()
 
-	application := app.New(db)
+	application := app.New(db, cfg.JWT.Secret, cfg.JWT.Issuer)
 
 	server := httpapi.NewServer(application.Auth)
 
