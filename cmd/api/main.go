@@ -33,6 +33,7 @@ func main() {
 	server := httpapi.NewServer(
 		application.Auth,
 		application.Token,
+		application.Users,
 	)
 
 	log.Println("server listening on :8080")

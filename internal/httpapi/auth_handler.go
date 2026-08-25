@@ -1,11 +1,13 @@
 package httpapi
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/ModstDev/Pokerer/internal/auth"
+	"github.com/ModstDev/Pokerer/internal/httpapi/middleware"
 )
 
 type registerRequest struct {
@@ -87,6 +89,29 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) me(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserID(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	user, err := s.userRepository.GetByID(r.Context(), userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			writeError(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, userResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt.Format(time.RFC3339),
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
