@@ -14,7 +14,8 @@ SELECT
     updated_at
 FROM wallets
 WHERE user_id = ?
-LIMIT 1;
+LIMIT 1
+FOR UPDATE;
 
 -- name: CreateWalletTransaction :exec
 INSERT INTO wallet_transactions (
@@ -38,3 +39,8 @@ FROM wallet_transactions wt
 JOIN wallets w ON w.id = wt.wallet_id
 WHERE w.user_id = ?
 ORDER BY wt.created_at DESC;
+
+-- name: UpdateWalletBalance :exec
+UPDATE wallets
+SET balance = ?
+WHERE id = ?;

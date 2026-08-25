@@ -67,6 +67,7 @@ SELECT
 FROM wallets
 WHERE user_id = ?
 LIMIT 1
+FOR UPDATE
 `
 
 func (q *Queries) GetWalletByUserID(ctx context.Context, userID string) (Wallet, error) {
@@ -124,4 +125,20 @@ func (q *Queries) GetWalletTransactionsByUserID(ctx context.Context, userID stri
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateWalletBalance = `-- name: UpdateWalletBalance :exec
+UPDATE wallets
+SET balance = ?
+WHERE id = ?
+`
+
+type UpdateWalletBalanceParams struct {
+	Balance int64  `json:"balance"`
+	ID      string `json:"id"`
+}
+
+func (q *Queries) UpdateWalletBalance(ctx context.Context, arg UpdateWalletBalanceParams) error {
+	_, err := q.db.ExecContext(ctx, updateWalletBalance, arg.Balance, arg.ID)
+	return err
 }
