@@ -8,6 +8,28 @@ import (
 	"time"
 )
 
+type PokerTable struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	SmallBlind int64     `json:"small_blind"`
+	BigBlind   int64     `json:"big_blind"`
+	MinBuyIn   int64     `json:"min_buy_in"`
+	MaxBuyIn   int64     `json:"max_buy_in"`
+	MaxPlayers int32     `json:"max_players"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type TablePlayer struct {
+	ID         string    `json:"id"`
+	TableID    string    `json:"table_id"`
+	UserID     string    `json:"user_id"`
+	SeatNumber int32     `json:"seat_number"`
+	Chips      int64     `json:"chips"`
+	JoinedAt   time.Time `json:"joined_at"`
+}
+
 type User struct {
 	ID           string    `json:"id"`
 	Username     string    `json:"username"`
