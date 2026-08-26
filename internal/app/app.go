@@ -37,7 +37,7 @@ func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
 		Wallets: walletRepository,
 
 		Wallet: wallet.NewService(db, walletRepository),
-		Auth:   auth.NewService(userRepository),
+		Auth:   auth.NewService(db, userRepository, walletRepository),
 		Token:  token.NewJWT(jwtSecret, jwtIssuer),
 	}
 }

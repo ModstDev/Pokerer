@@ -10,17 +10,22 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ModstDev/Pokerer/internal/auth/token"
-	database "github.com/ModstDev/Pokerer/internal/database/generated"
+	"github.com/ModstDev/Pokerer/internal/database"
+	generated "github.com/ModstDev/Pokerer/internal/database/generated"
 	"github.com/ModstDev/Pokerer/internal/repository"
 )
 
 type Service struct {
-	users *repository.UserRepository
+	db      *sql.DB
+	users   *repository.UserRepository
+	wallets *repository.WalletRepository
 }
 
-func NewService(users *repository.UserRepository) *Service {
+func NewService(db *sql.DB, users *repository.UserRepository, wallets *repository.WalletRepository) *Service {
 	return &Service{
-		users: users,
+		db:      db,
+		users:   users,
+		wallets: wallets,
 	}
 }
 
@@ -36,55 +41,72 @@ type LoginInput struct {
 }
 
 type LoginResult struct {
-	User        database.User
+	User        generated.User
 	AccessToken string
 }
 
-func (s *Service) Register(ctx context.Context, input RegisterInput) (database.User, error) {
+func (s *Service) Register(ctx context.Context, input RegisterInput) (generated.User, error) {
 	username := strings.TrimSpace(input.Username)
 	email := strings.ToLower(strings.TrimSpace(input.Email))
 
 	if username == "" {
-		return database.User{}, fmt.Errorf("username is required")
+		return generated.User{}, fmt.Errorf("username is required")
 	}
 
 	if email == "" {
-		return database.User{}, fmt.Errorf("email is required")
+		return generated.User{}, fmt.Errorf("email is required")
 	}
 
 	if len(input.Password) < 8 {
-		return database.User{}, fmt.Errorf("password must contain at least 8 characters")
+		return generated.User{}, fmt.Errorf("password must contain at least 8 characters")
 	}
 
 	_, err := s.users.GetByEmail(ctx, email)
 	if err == nil {
-		return database.User{}, fmt.Errorf("email already exists")
+		return generated.User{}, fmt.Errorf("email already exists")
 	}
 
 	if err != sql.ErrNoRows {
-		return database.User{}, fmt.Errorf("checking email: %w", err)
+		return generated.User{}, fmt.Errorf("checking email: %w", err)
 	}
 
 	passwordHash, err := HashPassword(input.Password)
 	if err != nil {
-		return database.User{}, fmt.Errorf("hashing password: %w", err)
+		return generated.User{}, fmt.Errorf("hashing password: %w", err)
 	}
 
 	userID := uuid.New().String()
+	walletID := uuid.New().String()
 
-	err = s.users.Create(ctx, database.CreateUserParams{
-		ID:           userID,
-		Username:     username,
-		Email:        email,
-		PasswordHash: passwordHash,
+	err = database.WithTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		users := s.users.WithTx(tx)
+		wallets := s.wallets.WithTx(tx)
+
+		if err := users.Create(ctx, generated.CreateUserParams{
+			ID:           userID,
+			Username:     username,
+			Email:        email,
+			PasswordHash: passwordHash,
+		}); err != nil {
+			return fmt.Errorf("creating user: %w", err)
+		}
+
+		if err := wallets.Create(ctx, generated.CreateWalletParams{
+			ID:     walletID,
+			UserID: userID,
+		}); err != nil {
+			return fmt.Errorf("creating wallet: %w", err)
+		}
+
+		return nil
 	})
 	if err != nil {
-		return database.User{}, fmt.Errorf("creating user: %w", err)
+		return generated.User{}, err
 	}
 
 	user, err := s.users.GetByID(ctx, userID)
 	if err != nil {
-		return database.User{}, fmt.Errorf("getting created user: %w", err)
+		return generated.User{}, fmt.Errorf("getting created user: %w", err)
 	}
 
 	return user, nil

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	database "github.com/ModstDev/Pokerer/internal/database/generated"
 )
@@ -26,4 +27,10 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (database.User,
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (database.User, error) {
 	return r.queries.GetUserByEmail(ctx, email)
+}
+
+func (r *UserRepository) WithTx(tx *sql.Tx) *UserRepository {
+	return &UserRepository{
+		queries: r.queries.WithTx(tx),
+	}
 }

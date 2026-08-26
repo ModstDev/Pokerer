@@ -61,3 +61,7 @@ func (s *Service) Deposit(ctx context.Context, userID string, amount int64) erro
 
 	})
 }
+
+func (s *Service) GetByUserID(ctx context.Context, userID string) (generated.Wallet, error) {
+	return s.wallets.GetByUserID(ctx, userID)
+}

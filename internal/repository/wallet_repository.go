@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	database "github.com/ModstDev/Pokerer/internal/database/generated"
 )
@@ -30,4 +31,10 @@ func (r *WalletRepository) CreateTransaction(ctx context.Context, params databas
 
 func (r *WalletRepository) GetTransactionByUserID(ctx context.Context, userID string) ([]database.WalletTransaction, error) {
 	return r.queries.GetWalletTransactionsByUserID(ctx, userID)
+}
+
+func (r *WalletRepository) WithTx(tx *sql.Tx) *WalletRepository {
+	return &WalletRepository{
+		queries: r.queries.WithTx(tx),
+	}
 }
