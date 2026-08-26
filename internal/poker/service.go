@@ -196,5 +196,64 @@ func findFreeSeat(players []generated.TablePlayer, maxPlayers int) (int, error) 
 
 // TODO
 func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string) error {
-	return nil
+	return database.WithTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		tables := s.tables.WithTx(tx)
+		wallets := s.wallets.WithTx(tx)
+
+		// Lock table first
+		table, err := tables.GetByID(ctx, tableID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("table not found")
+			}
+
+			return fmt.Errorf("getting table: %w", err)
+		}
+
+		if table.Status != "waiting" {
+			return errors.New("cannot leave an active table")
+		}
+
+		// Lock the player row.
+		player, err := tables.GetPlayer(ctx, tableID, userID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("user is not at this table")
+			}
+
+			return fmt.Errorf("getting table player: %w", err)
+		}
+
+		// Lock the wallet.
+		wallet, err := wallets.GetByUserID(ctx, userID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("wallet not found")
+			}
+
+			return fmt.Errorf("getting wallet: %w", err)
+		}
+
+		newBalance := wallet.Balance + player.Chips
+
+		if err := wallets.UpdateBalance(ctx, wallet.ID, newBalance); err != nil {
+			return fmt.Errorf("updating wallet: %w", err)
+		}
+
+		if err := wallets.CreateTransaction(ctx, generated.CreateWalletTransactionParams{
+			ID:           uuid.New().String(),
+			WalletID:     wallet.ID,
+			Type:         "table_leave",
+			Amount:       player.Chips,
+			BalanceAfter: newBalance,
+		},
+		); err != nil {
+			return fmt.Errorf("creating wallet transaction: %w", err)
+		}
+
+		if err := tables.RemovePlayer(ctx, tableID, userID); err != nil {
+			return fmt.Errorf("removing player from table: %w", err)
+		}
+		return nil
+	})
 }

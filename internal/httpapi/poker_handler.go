@@ -78,3 +78,20 @@ func (s *Server) joinTable(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (s *Server) leaveTable(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserID(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	tableID := r.PathValue("id")
+
+	if err := s.pokerService.LeaveTable(r.Context(), tableID, userID); err != nil {
+		writeError(w, http.StatusInternalServerError, "couldn't leave table")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
