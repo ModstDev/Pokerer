@@ -65,3 +65,12 @@ func (s *Service) Deposit(ctx context.Context, userID string, amount int64) erro
 func (s *Service) GetByUserID(ctx context.Context, userID string) (generated.Wallet, error) {
 	return s.wallets.GetByUserID(ctx, userID)
 }
+
+func (s *Service) GetTransactions(ctx context.Context, userID string) ([]generated.WalletTransaction, error) {
+	transactions, err := s.wallets.GetTransactionByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting wallet transactions: %w", err)
+	}
+
+	return transactions, nil
+}

@@ -16,6 +16,14 @@ type walletResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type walletTransactionResponse struct {
+	ID           string    `json:"id"`
+	Type         string    `json:"type"`
+	Amount       int64     `json:"amount"`
+	BalanceAfter int64     `json:"balance_after"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type depositRequest struct {
 	Amount int64 `json:"amount"`
 }
@@ -71,4 +79,32 @@ func (s *Server) deposit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) getWalletTransactions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserID(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	transactions, err := s.walletService.GetTransactions(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "transactions not found")
+		return
+	}
+
+	response := make([]walletTransactionResponse, 0, len(transactions))
+
+	for _, transaction := range transactions {
+		response = append(response, walletTransactionResponse{
+			ID:           transaction.ID,
+			Type:         transaction.Type,
+			Amount:       transaction.Amount,
+			BalanceAfter: transaction.BalanceAfter,
+			CreatedAt:    transaction.CreatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
