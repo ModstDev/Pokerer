@@ -43,6 +43,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/wallet", protected(http.HandlerFunc(s.getWallet)))
 	mux.Handle("GET /api/v1/wallet/transactions", protected(http.HandlerFunc(s.getWalletTransactions)))
 	mux.HandleFunc("GET /api/v1/tables", s.listTables)
+	mux.HandleFunc("GET /api/v1/tables/{id}", s.getTable)
 
 	mux.HandleFunc("POST /api/v1/auth/register", s.register)
 	mux.HandleFunc("POST /api/v1/auth/login", s.login)

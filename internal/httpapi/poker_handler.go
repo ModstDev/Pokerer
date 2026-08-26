@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/ModstDev/Pokerer/internal/httpapi/middleware"
 	"github.com/ModstDev/Pokerer/internal/poker"
@@ -19,6 +20,27 @@ type createTableRequest struct {
 
 type joinTableRequest struct {
 	BuyIn int64 `json:"buy_in"`
+}
+
+type tablePlayerResponse struct {
+	UserID     string `json:"user_id"`
+	SeatNumber int32  `json:"seat_number"`
+	Chips      int64  `json:"chips"`
+	JoinedAt   string `json:"joined_at"`
+}
+
+type tableDetailsResponse struct {
+	ID         string                `json:"id"`
+	Name       string                `json:"name"`
+	SmallBlind int64                 `json:"small_blind"`
+	BigBlind   int64                 `json:"big_blind"`
+	MinBuyIn   int64                 `json:"min_buy_in"`
+	MaxBuyIn   int64                 `json:"max_buy_in"`
+	MaxPlayers int32                 `json:"max_players"`
+	Status     string                `json:"status"`
+	CreatedAt  string                `json:"created_at"`
+	UpdatedAt  string                `json:"updated_at"`
+	Players    []tablePlayerResponse `json:"players"`
 }
 
 func (s *Server) createTable(w http.ResponseWriter, r *http.Request) {
@@ -94,4 +116,44 @@ func (s *Server) leaveTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) getTable(w http.ResponseWriter, r *http.Request) {
+	tableID := r.PathValue("id")
+
+	details, err := s.pokerService.GetTableDetails(
+		r.Context(),
+		tableID,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get table details")
+		return
+	}
+
+	players := make([]tablePlayerResponse, 0, len(details.Players))
+
+	for _, player := range details.Players {
+		players = append(players, tablePlayerResponse{
+			UserID:     player.UserID,
+			SeatNumber: player.SeatNumber,
+			Chips:      player.Chips,
+			JoinedAt:   player.JoinedAt.Format(time.RFC3339),
+		})
+	}
+
+	response := tableDetailsResponse{
+		ID:         details.Table.ID,
+		Name:       details.Table.Name,
+		SmallBlind: details.Table.SmallBlind,
+		BigBlind:   details.Table.BigBlind,
+		MinBuyIn:   details.Table.MinBuyIn,
+		MaxBuyIn:   details.Table.MaxBuyIn,
+		MaxPlayers: details.Table.MaxPlayers,
+		Status:     details.Table.Status,
+		CreatedAt:  details.Table.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  details.Table.UpdatedAt.Format(time.RFC3339),
+		Players:    players,
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }

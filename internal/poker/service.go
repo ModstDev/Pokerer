@@ -36,6 +36,11 @@ type CreateTableInput struct {
 	MaxPlayers int
 }
 
+type TableDetails struct {
+	Table   generated.PokerTable
+	Players []generated.TablePlayer
+}
+
 func (s *Service) CreateTable(ctx context.Context, input CreateTableInput) (generated.PokerTable, error) {
 	if input.Name == "" {
 		return generated.PokerTable{}, fmt.Errorf("table name is required")
@@ -254,6 +259,28 @@ func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string)
 		if err := tables.RemovePlayer(ctx, tableID, userID); err != nil {
 			return fmt.Errorf("removing player from table: %w", err)
 		}
+
 		return nil
 	})
+}
+
+func (s *Service) GetTableDetails(ctx context.Context, tableID string) (TableDetails, error) {
+	table, err := s.tables.GetByID(ctx, tableID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return TableDetails{}, errors.New("table not found")
+		}
+
+		return TableDetails{}, fmt.Errorf("getting table: %w", err)
+	}
+
+	players, err := s.tables.ListPlayers(ctx, tableID)
+	if err != nil {
+		return TableDetails{}, fmt.Errorf("getting table players: %w", err)
+	}
+
+	return TableDetails{
+		Table:   table,
+		Players: players,
+	}, nil
 }
