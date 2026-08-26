@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	generated "github.com/ModstDev/Pokerer/internal/database/generated"
 )
@@ -28,7 +29,7 @@ func (r *PokerTableRepository) List(ctx context.Context) ([]generated.ListPokerT
 	return r.queries.ListPokerTables(ctx)
 }
 
-func (r *PokerTableRepository) AddPlayerr(ctx context.Context, params generated.AddTablePlayerParams) error {
+func (r *PokerTableRepository) AddPlayer(ctx context.Context, params generated.AddTablePlayerParams) error {
 	return r.queries.AddTablePlayer(ctx, params)
 }
 
@@ -48,4 +49,10 @@ func (r *PokerTableRepository) GetPlayer(ctx context.Context, tableID string, us
 
 func (r *PokerTableRepository) ListPlayers(ctx context.Context, tableID string) ([]generated.TablePlayer, error) {
 	return r.queries.ListTablePlayers(ctx, tableID)
+}
+
+func (r *PokerTableRepository) WithTx(tx *sql.Tx) *PokerTableRepository {
+	return &PokerTableRepository{
+		queries: r.queries.WithTx(tx),
+	}
 }

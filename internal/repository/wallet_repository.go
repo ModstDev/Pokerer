@@ -33,6 +33,13 @@ func (r *WalletRepository) GetTransactionByUserID(ctx context.Context, userID st
 	return r.queries.GetWalletTransactionsByUserID(ctx, userID)
 }
 
+func (r *WalletRepository) UpdateBalance(ctx context.Context, walletID string, balance int64) error {
+	return r.queries.UpdateWalletBalance(ctx, database.UpdateWalletBalanceParams{
+		ID:      walletID,
+		Balance: balance,
+	})
+}
+
 func (r *WalletRepository) WithTx(tx *sql.Tx) *WalletRepository {
 	return &WalletRepository{
 		queries: r.queries.WithTx(tx),

@@ -64,6 +64,7 @@ SELECT
 FROM poker_tables
 WHERE id = ?
 LIMIT 1
+FOR UPDATE
 `
 
 func (q *Queries) GetPokerTableByID(ctx context.Context, id string) (PokerTable, error) {

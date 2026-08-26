@@ -39,6 +39,36 @@ func (q *Queries) AddTablePlayer(ctx context.Context, arg AddTablePlayerParams) 
 	return err
 }
 
+const getOccupiedSeats = `-- name: GetOccupiedSeats :many
+SELECT seat_number
+FROM table_players
+WHERE table_id = ?
+ORDER BY seat_number
+`
+
+func (q *Queries) GetOccupiedSeats(ctx context.Context, tableID string) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getOccupiedSeats, tableID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var seat_number int32
+		if err := rows.Scan(&seat_number); err != nil {
+			return nil, err
+		}
+		items = append(items, seat_number)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTablePlayer = `-- name: GetTablePlayer :one
 SELECT
     id,
@@ -51,6 +81,7 @@ FROM table_players
 WHERE table_id = ?
   AND user_id = ?
 LIMIT 1
+FOR UPDATE
 `
 
 type GetTablePlayerParams struct {

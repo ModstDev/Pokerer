@@ -24,7 +24,8 @@ SELECT
 FROM table_players
 WHERE table_id = ?
   AND user_id = ?
-LIMIT 1;
+LIMIT 1
+FOR UPDATE;
 
 -- name: ListTablePlayers :many
 SELECT
@@ -34,6 +35,12 @@ SELECT
     seat_number,
     chips,
     joined_at
+FROM table_players
+WHERE table_id = ?
+ORDER BY seat_number;
+
+-- name: GetOccupiedSeats :many
+SELECT seat_number
 FROM table_players
 WHERE table_id = ?
 ORDER BY seat_number;

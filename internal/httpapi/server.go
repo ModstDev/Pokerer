@@ -48,6 +48,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", s.login)
 	mux.Handle("POST /api/v1/wallet/deposit", protected(http.HandlerFunc(s.deposit)))
 	mux.Handle("POST /api/v1/tables", protected(http.HandlerFunc(s.createTable)))
+	mux.Handle("POST /api/v1/tables/{id}/join", protected(http.HandlerFunc(s.joinTable)))
 
 	return mux
 }

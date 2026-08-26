@@ -42,7 +42,7 @@ func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
 
 		Wallet: wallet.NewService(db, walletRepository),
 		Auth:   auth.NewService(db, userRepository, walletRepository),
-		Poker:  poker.NewService(tableRepository),
+		Poker:  poker.NewService(db, tableRepository, walletRepository),
 
 		Token: token.NewJWT(jwtSecret, jwtIssuer),
 	}

@@ -3,6 +3,7 @@ package wallet
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ModstDev/Pokerer/internal/database"
@@ -59,6 +60,50 @@ func (s *Service) Deposit(ctx context.Context, userID string, amount int64) erro
 
 		return nil
 
+	})
+}
+
+func (s *Service) Withdraw(ctx context.Context, userID string, amount int64) error {
+	if amount <= 0 {
+		return errors.New("withdrawal amount must be positive")
+	}
+
+	return database.WithTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		queries := generated.New(tx)
+
+		wallet, err := queries.GetWalletByUserID(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("getting wallet: %w", err)
+		}
+
+		if wallet.Balance < amount {
+			return errors.New("insufficient balance")
+		}
+
+		newBalance := wallet.Balance - amount
+
+		if err := queries.UpdateWalletBalance(
+			ctx,
+			generated.UpdateWalletBalanceParams{
+				Balance: newBalance,
+				ID:      wallet.ID,
+			},
+		); err != nil {
+			return fmt.Errorf("updating wallet: %w", err)
+		}
+
+		if err := queries.CreateWalletTransaction(ctx, generated.CreateWalletTransactionParams{
+			ID:           uuid.New().String(),
+			WalletID:     wallet.ID,
+			Type:         "table_buy_in",
+			Amount:       -amount,
+			BalanceAfter: newBalance,
+		},
+		); err != nil {
+			return fmt.Errorf("creating wallet transaction: %w", err)
+		}
+
+		return nil
 	})
 }
 

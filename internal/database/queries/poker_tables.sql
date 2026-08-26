@@ -25,7 +25,8 @@ SELECT
     updated_at
 FROM poker_tables
 WHERE id = ?
-LIMIT 1;
+LIMIT 1
+FOR UPDATE;
 
 -- name: ListPokerTables :many
 SELECT

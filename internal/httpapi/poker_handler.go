@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ModstDev/Pokerer/internal/httpapi/middleware"
 	"github.com/ModstDev/Pokerer/internal/poker"
 )
 
@@ -14,6 +15,10 @@ type createTableRequest struct {
 	MinBuyIn   int64  `json:"min_buy_in"`
 	MaxBuyIn   int64  `json:"max_buy_in"`
 	MaxPlayers int    `json:"max_players"`
+}
+
+type joinTableRequest struct {
+	BuyIn int64 `json:"buy_in"`
 }
 
 func (s *Server) createTable(w http.ResponseWriter, r *http.Request) {
@@ -48,4 +53,28 @@ func (s *Server) listTables(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, tables)
+}
+
+func (s *Server) joinTable(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserID(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	tableID := r.PathValue("id")
+
+	var req joinTableRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	if err := s.pokerService.JoinTable(r.Context(), tableID, userID, req.BuyIn); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to join table")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
