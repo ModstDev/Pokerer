@@ -6,6 +6,7 @@ import (
 	"github.com/ModstDev/Pokerer/internal/auth"
 	"github.com/ModstDev/Pokerer/internal/auth/token"
 	database "github.com/ModstDev/Pokerer/internal/database/generated"
+	"github.com/ModstDev/Pokerer/internal/poker"
 	"github.com/ModstDev/Pokerer/internal/repository"
 	"github.com/ModstDev/Pokerer/internal/wallet"
 )
@@ -21,7 +22,9 @@ type App struct {
 
 	Wallet *wallet.Service
 	Auth   *auth.Service
-	Token  *token.JWT
+	Poker  *poker.Service
+
+	Token *token.JWT
 }
 
 func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
@@ -29,6 +32,7 @@ func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
 
 	userRepository := repository.NewUserRepository(queries)
 	walletRepository := repository.NewWalletRepository(queries)
+	tableRepository := repository.NewPokerTableRepository(queries)
 
 	return &App{
 		DB: db,
@@ -38,6 +42,8 @@ func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
 
 		Wallet: wallet.NewService(db, walletRepository),
 		Auth:   auth.NewService(db, userRepository, walletRepository),
-		Token:  token.NewJWT(jwtSecret, jwtIssuer),
+		Poker:  poker.NewService(tableRepository),
+
+		Token: token.NewJWT(jwtSecret, jwtIssuer),
 	}
 }

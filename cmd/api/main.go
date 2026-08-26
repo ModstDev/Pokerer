@@ -35,6 +35,7 @@ func main() {
 		application.Token,
 		application.Users,
 		application.Wallet,
+		application.Poker,
 	)
 
 	log.Println("server listening on :8080")
