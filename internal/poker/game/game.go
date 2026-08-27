@@ -36,6 +36,10 @@ type Game struct {
 	Pot int64
 
 	Deck *Deck
+
+	CurrentPlayer int
+
+	CurrentBet int64
 }
 
 func NewGame() *Game {
@@ -84,6 +88,9 @@ func (g *Game) StartHand(r *rand.Rand) error {
 		return fmt.Errorf("at least two players are required")
 	}
 
+	g.CurrentPlayer = 0
+	g.CurrentBet = 0
+
 	g.Deck = NewDeck()
 	g.Deck.Shuffle(r)
 
@@ -122,13 +129,28 @@ func (g *Game) StartHand(r *rand.Rand) error {
 func (g *Game) AdvanceRound() error {
 	switch g.State {
 	case StatePreFlop:
-		return g.dealFlop()
+		if err := g.dealFlop(); err != nil {
+			return err
+		}
+
+		g.resetBettingRound()
+		return nil
 
 	case StateFlop:
-		return g.dealTurn()
+		if err := g.dealTurn(); err != nil {
+			return err
+		}
+
+		g.resetBettingRound()
+		return nil
 
 	case StateTurn:
-		return g.dealRiver()
+		if err := g.dealRiver(); err != nil {
+			return err
+		}
+
+		g.resetBettingRound()
+		return nil
 
 	case StateRiver:
 		g.State = StateShowdown
@@ -200,4 +222,39 @@ func (g *Game) dealRiver() error {
 	g.State = StateRiver
 
 	return nil
+}
+
+func (g *Game) CurrentPlayerID() string {
+	if g.CurrentPlayer < 0 || g.CurrentPlayer >= len(g.Players) {
+		return ""
+	}
+
+	return g.Players[g.CurrentPlayer].ID
+}
+
+func (g *Game) advancePlayer() error {
+	if len(g.Players) == 0 {
+		return fmt.Errorf("no players")
+	}
+
+	for i := 1; i <= len(g.Players); i++ {
+		index := (g.CurrentPlayer + i) % len(g.Players)
+
+		player := &g.Players[index]
+
+		if !player.Folded && !player.AllIn {
+			g.CurrentPlayer = index
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no active players")
+}
+
+func (g *Game) resetBettingRound() {
+	for i := range g.Players {
+		g.Players[i].Bet = 0
+	}
+
+	g.CurrentBet = 0
 }

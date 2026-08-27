@@ -209,3 +209,116 @@ func TestBurn(t *testing.T) {
 		t.Fatal("expected burn to fail on empty deck")
 	}
 }
+
+func TestCheck(t *testing.T) {
+	game := NewGame()
+
+	game.Players = []Player{
+		{
+			ID:    "player-1",
+			Seat:  0,
+			Chips: 1000,
+		},
+		{
+			ID:    "player-2",
+			Seat:  1,
+			Chips: 1000,
+		},
+	}
+
+	game.State = StatePreFlop
+	game.CurrentPlayer = 0
+	game.CurrentBet = 0
+
+	err := game.ApplyAction(Action{
+		Type: ActionCheck,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if game.CurrentPlayer != 1 {
+		t.Fatalf(
+			"expected player 1, got %d",
+			game.CurrentPlayer,
+		)
+	}
+}
+
+func TestCannotCheckAgainstBet(t *testing.T) {
+	game := NewGame()
+
+	game.Players = []Player{
+		{
+			ID:    "player-1",
+			Seat:  0,
+			Chips: 1000,
+			Bet:   0,
+		},
+	}
+
+	game.State = StatePreFlop
+	game.CurrentPlayer = 0
+	game.CurrentBet = 100
+
+	err := game.ApplyAction(Action{
+		Type: ActionCheck,
+	})
+
+	if err == nil {
+		t.Fatal("expected check to fail")
+	}
+}
+
+func TestCall(t *testing.T) {
+	game := NewGame()
+
+	game.Players = []Player{
+		{
+			ID:    "player-1",
+			Seat:  0,
+			Chips: 1000,
+			Bet:   0,
+		},
+		{
+			ID:    "player-2",
+			Seat:  1,
+			Chips: 1000,
+			Bet:   100,
+		},
+	}
+
+	game.State = StatePreFlop
+	game.CurrentPlayer = 0
+	game.CurrentBet = 100
+
+	err := game.ApplyAction(Action{
+		Type: ActionCall,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if game.Players[0].Chips != 900 {
+		t.Fatalf(
+			"expected 900 chips, got %d",
+			game.Players[0].Chips,
+		)
+	}
+
+	if game.Players[0].Bet != 100 {
+		t.Fatalf(
+			"expected bet 100, got %d",
+			game.Players[0].Bet,
+		)
+	}
+
+	if game.Pot != 100 {
+		t.Fatalf(
+			"expected pot 100, got %d",
+			game.Pot,
+		)
+	}
+}
