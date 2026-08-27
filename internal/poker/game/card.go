@@ -31,3 +31,10 @@ type Card struct {
 	Suit Suit
 	Rank Rank
 }
+
+func card(rank Rank, suit Suit) Card {
+	return Card{
+		Rank: rank,
+		Suit: suit,
+	}
+}
