@@ -37,6 +37,7 @@ type Player struct {
 	Cards  []Card
 	Folded bool
 	AllIn  bool
+	Acted  bool
 }
 
 type Game struct {
@@ -119,6 +120,7 @@ func (g *Game) StartHand(r *rand.Rand) error {
 		g.Players[i].Folded = false
 		g.Players[i].AllIn = false
 		g.Players[i].Bet = 0
+		g.Players[i].Acted = false
 	}
 
 	for i := range g.Players {
@@ -165,7 +167,8 @@ func (g *Game) AdvanceRound() error {
 		}
 
 		g.resetBettingRound()
-		return nil
+
+		return g.setFirstPostFlopPlayer()
 
 	case StateFlop:
 		if err := g.dealTurn(); err != nil {
@@ -173,7 +176,8 @@ func (g *Game) AdvanceRound() error {
 		}
 
 		g.resetBettingRound()
-		return nil
+
+		return g.setFirstPostFlopPlayer()
 
 	case StateTurn:
 		if err := g.dealRiver(); err != nil {
@@ -181,10 +185,12 @@ func (g *Game) AdvanceRound() error {
 		}
 
 		g.resetBettingRound()
-		return nil
+
+		return g.setFirstPostFlopPlayer()
 
 	case StateRiver:
 		g.State = StateShowdown
+
 		return nil
 
 	default:
@@ -285,6 +291,7 @@ func (g *Game) advancePlayer() error {
 func (g *Game) resetBettingRound() {
 	for i := range g.Players {
 		g.Players[i].Bet = 0
+		g.Players[i].Acted = false
 	}
 
 	g.CurrentBet = 0
@@ -325,4 +332,23 @@ func (g *Game) postBlind(playerIndex int, amount int64) int64 {
 	g.Pot += amount
 
 	return amount
+}
+
+func (g *Game) setFirstPostFlopPlayer() error {
+	for i := 1; i <= len(g.Players); i++ {
+		index := nextPosition(
+			g.DealerPosition,
+			i,
+			len(g.Players),
+		)
+
+		player := &g.Players[index]
+
+		if !player.Folded && !player.AllIn {
+			g.CurrentPlayer = index
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no player can act")
 }

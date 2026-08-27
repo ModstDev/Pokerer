@@ -404,3 +404,61 @@ func TestStartHandPostsBlinds(t *testing.T) {
 		)
 	}
 }
+
+func TestBettingRoundCompletes(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	for i := 0; i < 3; i++ {
+		if err := game.AddPlayer(Player{
+			ID:    fmt.Sprintf("player-%d", i),
+			Seat:  i,
+			Chips: 1000,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	rng := rand.New(rand.NewPCG(42, 0))
+
+	if err := game.StartHand(rng); err != nil {
+		t.Fatal(err)
+	}
+
+	// Player 0 calls 20.
+	if err := game.ApplyAction(Action{
+		Type: ActionCall,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Player 1 calls 10.
+	if err := game.ApplyAction(Action{
+		Type: ActionCall,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Big blind checks.
+	if err := game.ApplyAction(Action{
+		Type: ActionCheck,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if game.State != StateFlop {
+		t.Fatalf(
+			"expected flop, got %s",
+			game.State,
+		)
+	}
+
+	if len(game.CommunityCards) != 3 {
+		t.Fatalf(
+			"expected 3 community cards, got %d",
+			len(game.CommunityCards),
+		)
+	}
+}
