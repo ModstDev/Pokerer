@@ -462,3 +462,141 @@ func TestBettingRoundCompletes(t *testing.T) {
 		)
 	}
 }
+
+func TestDealerRotation(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	for i := 0; i < 3; i++ {
+		err := game.AddPlayer(Player{
+			ID:    fmt.Sprintf("player-%d", i),
+			Seat:  i,
+			Chips: 1000,
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if game.DealerPosition != 0 {
+		t.Fatalf(
+			"expected dealer at 0, got %d",
+			game.DealerPosition,
+		)
+	}
+
+	game.State = StateShowdown
+
+	if err := game.FinishHand(); err != nil {
+		t.Fatal(err)
+	}
+
+	if game.DealerPosition != 1 {
+		t.Fatalf(
+			"expected dealer at 1, got %d",
+			game.DealerPosition,
+		)
+	}
+
+	game.State = StateShowdown
+
+	if err := game.FinishHand(); err != nil {
+		t.Fatal(err)
+	}
+
+	if game.DealerPosition != 2 {
+		t.Fatalf(
+			"expected dealer at 2, got %d",
+			game.DealerPosition,
+		)
+	}
+}
+
+func TestMinimumRaise(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	game.Players = []Player{
+		{
+			ID:    "player-1",
+			Seat:  0,
+			Chips: 1000,
+			Bet:   20,
+		},
+		{
+			ID:    "player-2",
+			Seat:  1,
+			Chips: 1000,
+			Bet:   20,
+		},
+	}
+
+	game.State = StatePreFlop
+	game.CurrentPlayer = 0
+	game.CurrentBet = 20
+	game.MinRaise = 20
+
+	err := game.ApplyAction(Action{
+		Type:   ActionRaise,
+		Amount: 35,
+	})
+
+	if err == nil {
+		t.Fatal("expected minimum raise validation to fail")
+	}
+}
+
+func TestValidRaise(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	game.Players = []Player{
+		{
+			ID:    "player-1",
+			Seat:  0,
+			Chips: 1000,
+			Bet:   20,
+		},
+		{
+			ID:    "player-2",
+			Seat:  1,
+			Chips: 1000,
+			Bet:   20,
+		},
+	}
+
+	game.State = StatePreFlop
+	game.CurrentPlayer = 0
+	game.CurrentBet = 20
+	game.MinRaise = 20
+
+	err := game.ApplyAction(Action{
+		Type:   ActionRaise,
+		Amount: 40,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if game.CurrentBet != 40 {
+		t.Fatalf(
+			"expected current bet 40, got %d",
+			game.CurrentBet,
+		)
+	}
+
+	if game.MinRaise != 20 {
+		t.Fatalf(
+			"expected minimum raise 20, got %d",
+			game.MinRaise,
+		)
+	}
+}

@@ -29,17 +29,6 @@ type GameConfig struct {
 	BigBlind   int64
 }
 
-type Player struct {
-	ID     string
-	Seat   int
-	Chips  int64
-	Bet    int64
-	Cards  []Card
-	Folded bool
-	AllIn  bool
-	Acted  bool
-}
-
 type Game struct {
 	Config GameConfig
 
@@ -55,6 +44,9 @@ type Game struct {
 
 	CurrentPlayer int
 	CurrentBet    int64
+
+	// Minimum amount by which the current bet can be increased.
+	MinRaise int64
 
 	DealerPosition int
 }
@@ -108,6 +100,7 @@ func (g *Game) StartHand(r *rand.Rand) error {
 
 	g.CurrentPlayer = 0
 	g.CurrentBet = 0
+	g.MinRaise = g.Config.BigBlind
 
 	g.Deck = NewDeck()
 	g.Deck.Shuffle(r)
@@ -147,6 +140,7 @@ func (g *Game) StartHand(r *rand.Rand) error {
 	g.postBlind(bigBlind, g.Config.BigBlind)
 
 	g.CurrentBet = g.Players[bigBlind].Bet
+	g.MinRaise = g.Config.BigBlind
 
 	if len(g.Players) == 2 {
 		g.CurrentPlayer = smallBlind
@@ -269,34 +263,6 @@ func (g *Game) CurrentPlayerID() string {
 	return g.Players[g.CurrentPlayer].ID
 }
 
-func (g *Game) advancePlayer() error {
-	if len(g.Players) == 0 {
-		return fmt.Errorf("no players")
-	}
-
-	for i := 1; i <= len(g.Players); i++ {
-		index := (g.CurrentPlayer + i) % len(g.Players)
-
-		player := &g.Players[index]
-
-		if !player.Folded && !player.AllIn {
-			g.CurrentPlayer = index
-			return nil
-		}
-	}
-
-	return fmt.Errorf("no active players")
-}
-
-func (g *Game) resetBettingRound() {
-	for i := range g.Players {
-		g.Players[i].Bet = 0
-		g.Players[i].Acted = false
-	}
-
-	g.CurrentBet = 0
-}
-
 func (g *Game) blindPositions() (int, int) {
 	playerCount := len(g.Players)
 
@@ -334,21 +300,14 @@ func (g *Game) postBlind(playerIndex int, amount int64) int64 {
 	return amount
 }
 
-func (g *Game) setFirstPostFlopPlayer() error {
-	for i := 1; i <= len(g.Players); i++ {
-		index := nextPosition(
-			g.DealerPosition,
-			i,
-			len(g.Players),
-		)
-
-		player := &g.Players[index]
-
-		if !player.Folded && !player.AllIn {
-			g.CurrentPlayer = index
-			return nil
-		}
+func (g *Game) FinishHand() error {
+	if g.State != StateShowdown {
+		return fmt.Errorf("hand is not at showdown")
 	}
 
-	return fmt.Errorf("no player can act")
+	g.rotateDealer()
+
+	g.State = StateWaiting
+
+	return nil
 }

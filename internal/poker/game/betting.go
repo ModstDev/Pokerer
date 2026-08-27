@@ -93,4 +93,5 @@ func (g *Game) resetBettingRound() {
 	}
 
 	g.CurrentBet = 0
+	g.MinRaise = g.Config.BigBlind
 }

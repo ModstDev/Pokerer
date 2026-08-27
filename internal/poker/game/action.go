@@ -139,6 +139,12 @@ func (g *Game) raise(player *Player, amount int64) error {
 		return fmt.Errorf("raise must exceed current bet")
 	}
 
+	raiseAmount := amount - g.CurrentBet
+
+	if raiseAmount < g.MinRaise {
+		return fmt.Errorf("minimum raise is %d", g.MinRaise)
+	}
+
 	additional := amount - player.Bet
 
 	if additional > player.Chips {
@@ -150,6 +156,8 @@ func (g *Game) raise(player *Player, amount int64) error {
 
 	g.CurrentBet = amount
 	g.Pot += additional
+
+	g.MinRaise = raiseAmount
 
 	if player.Chips == 0 {
 		player.AllIn = true
@@ -166,20 +174,30 @@ func (g *Game) allIn(player *Player) error {
 	}
 
 	amount := player.Chips
+	newBet := player.Bet + amount
 
 	player.Chips = 0
-	player.Bet += amount
+	player.Bet += newBet
 	player.AllIn = true
 
-	if player.Bet > g.CurrentBet {
-		g.CurrentBet = player.Bet
+	if newBet > g.CurrentBet {
+		raiseAmount := newBet - g.CurrentBet
 
-		g.resetActionsAfterRaise(player)
-	} else {
-		player.Acted = true
+		g.CurrentBet = newBet
+		g.Pot += amount
+
+		if raiseAmount >= g.MinRaise {
+			g.MinRaise = raiseAmount
+			g.resetActionsAfterRaise(player)
+		} else {
+			player.Acted = true
+		}
+
+		return g.advanceAfterAction()
 	}
 
 	g.Pot += amount
+	player.Acted = true
 
 	return g.advanceAfterAction()
 }
@@ -206,95 +224,19 @@ func (g *Game) advanceAfterAction() error {
 	return g.advancePlayer()
 }
 
-func (g *Game) bettingRoundComplete() bool {
-	activePlayers := 0
-	playersWhoCanAct := 0
-
-	for _, player := range g.Players {
-		if player.Folded {
-			continue
-		}
-
-		activePlayers++
-
-		if player.AllIn {
-			continue
-		}
-
-		playersWhoCanAct++
-
-		if !player.Acted {
-			return false
-		}
-
-		if player.Bet != g.CurrentBet {
-			return false
-		}
-	}
-
-	if activePlayers <= 1 {
-		return true
-	}
-
-	return playersWhoCanAct > 0
-}
-
-func (g *Game) resetActionsAfterRaise(raiser *Player) {
-	for i := range g.Players {
-		if &g.Players[i] == raiser {
-			g.Players[i].Acted = true
-			continue
-		}
-
-		if !g.Players[i].Folded && !g.Players[i].AllIn {
-			g.Players[i].Acted = false
-		}
-	}
-}
-
-func (g *Game) setFirstPostFlopPlayer() error {
-	for i := 1; i <= len(g.Players); i++ {
-		index := nextPosition(
-			g.DealerPosition,
-			i,
-			len(g.Players),
-		)
-
-		player := &g.Players[index]
-
-		if !player.Folded && !player.AllIn {
-			g.CurrentPlayer = index
-			return nil
-		}
-	}
-
-	return fmt.Errorf("no player can act")
-}
-
-func (g *Game) advancePlayer() error {
+func (g *Game) rotateDealer() {
 	if len(g.Players) == 0 {
-		return fmt.Errorf("no players")
+		return
 	}
 
 	for i := 1; i <= len(g.Players); i++ {
-		index := (g.CurrentPlayer + i) % len(g.Players)
+		position := nextPosition(g.DealerPosition, i, len(g.Players))
 
-		player := &g.Players[index]
+		player := &g.Players[position]
 
-		if !player.Folded && !player.AllIn {
-			g.CurrentPlayer = index
-			return nil
+		if !player.Folded && player.Chips > 0 {
+			g.DealerPosition = position
+			return
 		}
 	}
-
-	return fmt.Errorf("no active players")
-}
-
-func (g *Game) resetBettingRound() {
-	for i := range g.Players {
-		g.Players[i].Bet = 0
-		g.Players[i].Acted = false
-	}
-
-	g.CurrentBet = 0
 }
