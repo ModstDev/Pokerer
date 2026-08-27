@@ -20,6 +20,7 @@ type Player struct {
 	ID     string
 	Seat   int
 	Chips  int64
+	Bet    int64
 	Cards  []Card
 	Folded bool
 	AllIn  bool
@@ -93,6 +94,7 @@ func (g *Game) StartHand(r *rand.Rand) error {
 		g.Players[i].Cards = nil
 		g.Players[i].Folded = false
 		g.Players[i].AllIn = false
+		g.Players[i].Bet = 0
 	}
 
 	for i := range g.Players {
@@ -113,6 +115,89 @@ func (g *Game) StartHand(r *rand.Rand) error {
 	}
 
 	g.State = StatePreFlop
+
+	return nil
+}
+
+func (g *Game) AdvanceRound() error {
+	switch g.State {
+	case StatePreFlop:
+		return g.dealFlop()
+
+	case StateFlop:
+		return g.dealTurn()
+
+	case StateTurn:
+		return g.dealRiver()
+
+	case StateRiver:
+		g.State = StateShowdown
+		return nil
+
+	default:
+		return fmt.Errorf("cannot advance game from state %q", g.State)
+	}
+}
+
+func (g *Game) dealFlop() error {
+	if g.Deck == nil {
+		return fmt.Errorf("deck is not initialized")
+	}
+
+	if !g.Deck.Burn() {
+		return fmt.Errorf("failed to burn card before flop")
+	}
+
+	for i := 0; i < 3; i++ {
+		card, ok := g.Deck.Draw()
+		if !ok {
+			return fmt.Errorf("failed to deal flop")
+		}
+
+		g.CommunityCards = append(g.CommunityCards, card)
+	}
+
+	g.State = StateFlop
+
+	return nil
+}
+
+func (g *Game) dealTurn() error {
+	if g.Deck == nil {
+		return fmt.Errorf("deck is not initialized")
+	}
+
+	if !g.Deck.Burn() {
+		return fmt.Errorf("failed to burn card before flop")
+	}
+
+	card, ok := g.Deck.Draw()
+	if !ok {
+		return fmt.Errorf("failed to deal turn")
+	}
+
+	g.CommunityCards = append(g.CommunityCards, card)
+	g.State = StateTurn
+
+	return nil
+}
+
+func (g *Game) dealRiver() error {
+	if g.Deck == nil {
+		return fmt.Errorf("deck is not initialized")
+	}
+
+	if !g.Deck.Burn() {
+		return fmt.Errorf("failed to burn card before flop")
+	}
+
+	card, ok := g.Deck.Draw()
+	if !ok {
+		return fmt.Errorf("failed to deal river")
+	}
+
+	g.CommunityCards = append(g.CommunityCards, card)
+	g.State = StateRiver
 
 	return nil
 }

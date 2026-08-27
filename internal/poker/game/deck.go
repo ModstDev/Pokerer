@@ -39,3 +39,13 @@ func (d *Deck) Draw() (Card, bool) {
 
 	return card, true
 }
+
+func (d *Deck) Burn() bool {
+	if len(d.cards) == 0 {
+		return false
+	}
+
+	d.cards = d.cards[:len(d.cards)-1]
+
+	return true
+}
