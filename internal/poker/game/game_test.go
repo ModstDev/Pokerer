@@ -1,12 +1,16 @@
 package game
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"testing"
 )
 
 func TestStartHand(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	err := game.AddPlayer(Player{
 		ID:    "player-1",
@@ -78,7 +82,10 @@ func TestDeckContains52Cards(t *testing.T) {
 }
 
 func TestAdvanceRounds(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	if err := game.AddPlayer(Player{
 		ID:    "player-1",
@@ -173,7 +180,10 @@ func TestAdvanceRounds(t *testing.T) {
 }
 
 func TestCannotAdvanceWaitingGame(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	if err := game.AdvanceRound(); err == nil {
 		t.Fatal("expected error when advancing waiting game")
@@ -181,7 +191,10 @@ func TestCannotAdvanceWaitingGame(t *testing.T) {
 }
 
 func TestCannotAdvanceShowdown(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	game.State = StateShowdown
 
@@ -211,7 +224,10 @@ func TestBurn(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	game.Players = []Player{
 		{
@@ -247,7 +263,10 @@ func TestCheck(t *testing.T) {
 }
 
 func TestCannotCheckAgainstBet(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	game.Players = []Player{
 		{
@@ -272,7 +291,10 @@ func TestCannotCheckAgainstBet(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	game := NewGame()
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
 
 	game.Players = []Player{
 		{
@@ -319,6 +341,66 @@ func TestCall(t *testing.T) {
 		t.Fatalf(
 			"expected pot 100, got %d",
 			game.Pot,
+		)
+	}
+}
+
+func TestStartHandPostsBlinds(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	for i := 0; i < 3; i++ {
+		err := game.AddPlayer(Player{
+			ID:    fmt.Sprintf("player-%d", i),
+			Seat:  i,
+			Chips: 1000,
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	rng := rand.New(rand.NewPCG(42, 0))
+
+	if err := game.StartHand(rng); err != nil {
+		t.Fatal(err)
+	}
+
+	if game.Players[1].Bet != 10 {
+		t.Fatalf(
+			"expected small blind of 10, got %d",
+			game.Players[1].Bet,
+		)
+	}
+
+	if game.Players[2].Bet != 20 {
+		t.Fatalf(
+			"expected big blind of 20, got %d",
+			game.Players[2].Bet,
+		)
+	}
+
+	if game.Pot != 30 {
+		t.Fatalf(
+			"expected pot of 30, got %d",
+			game.Pot,
+		)
+	}
+
+	if game.CurrentBet != 20 {
+		t.Fatalf(
+			"expected current bet of 20, got %d",
+			game.CurrentBet,
+		)
+	}
+
+	if game.CurrentPlayer != 0 {
+		t.Fatalf(
+			"expected player 0 to act first, got %d",
+			game.CurrentPlayer,
 		)
 	}
 }

@@ -16,6 +16,19 @@ const (
 	StateShowdown State = "showdown"
 )
 
+type Position uint8
+
+const (
+	PositionDealer Position = iota
+	PositionSmallBlind
+	PositionBigBlind
+)
+
+type GameConfig struct {
+	SmallBlind int64
+	BigBlind   int64
+}
+
 type Player struct {
 	ID     string
 	Seat   int
@@ -27,6 +40,8 @@ type Player struct {
 }
 
 type Game struct {
+	Config GameConfig
+
 	State State
 
 	Players []Player
@@ -38,16 +53,18 @@ type Game struct {
 	Deck *Deck
 
 	CurrentPlayer int
+	CurrentBet    int64
 
-	CurrentBet int64
+	DealerPosition int
 }
 
-func NewGame() *Game {
+func NewGame(config GameConfig) *Game {
 	return &Game{
+		Config:         config,
 		State:          StateWaiting,
 		Players:        make([]Player, 0, 9),
 		CommunityCards: make([]Card, 0, 5),
-		Pot:            0,
+		DealerPosition: 0,
 	}
 }
 
@@ -119,6 +136,20 @@ func (g *Game) StartHand(r *rand.Rand) error {
 			card1,
 			card2,
 		}
+	}
+
+	smallBlind, bigBlind := g.blindPositions()
+
+	g.postBlind(smallBlind, g.Config.SmallBlind)
+
+	g.postBlind(bigBlind, g.Config.BigBlind)
+
+	g.CurrentBet = g.Players[bigBlind].Bet
+
+	if len(g.Players) == 2 {
+		g.CurrentPlayer = smallBlind
+	} else {
+		g.CurrentPlayer = nextPosition(bigBlind, 1, len(g.Players))
 	}
 
 	g.State = StatePreFlop
@@ -257,4 +288,41 @@ func (g *Game) resetBettingRound() {
 	}
 
 	g.CurrentBet = 0
+}
+
+func (g *Game) blindPositions() (int, int) {
+	playerCount := len(g.Players)
+
+	if playerCount == 2 {
+		// Dealer is small blind.
+		return g.DealerPosition, nextPosition(g.DealerPosition, 1, playerCount)
+	}
+
+	smallBlind := nextPosition(g.DealerPosition, 1, playerCount)
+
+	bigBlind := nextPosition(g.DealerPosition, 2, playerCount)
+
+	return smallBlind, bigBlind
+}
+
+func nextPosition(position, offset, playerCount int) int {
+	return (position + offset) % playerCount
+}
+
+func (g *Game) postBlind(playerIndex int, amount int64) int64 {
+	player := &g.Players[playerIndex]
+
+	if amount >= player.Chips {
+		amount = player.Chips
+		player.Chips = 0
+		player.Bet += amount
+		player.AllIn = true
+	} else {
+		player.Chips -= amount
+		player.Bet += amount
+	}
+
+	g.Pot += amount
+
+	return amount
 }
