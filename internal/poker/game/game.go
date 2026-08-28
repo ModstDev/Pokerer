@@ -114,6 +114,7 @@ func (g *Game) StartHand(r *rand.Rand) error {
 		g.Players[i].AllIn = false
 		g.Players[i].Bet = 0
 		g.Players[i].Acted = false
+		g.Players[i].TotalContribution = 0
 	}
 
 	for i := range g.Players {
@@ -285,17 +286,15 @@ func nextPosition(position, offset, playerCount int) int {
 func (g *Game) postBlind(playerIndex int, amount int64) int64 {
 	player := &g.Players[playerIndex]
 
-	if amount >= player.Chips {
+	if amount > player.Chips {
 		amount = player.Chips
-		player.Chips = 0
-		player.Bet += amount
-		player.AllIn = true
-	} else {
-		player.Chips -= amount
-		player.Bet += amount
 	}
 
-	g.Pot += amount
+	g.contribute(player, amount)
+
+	if player.Chips == 0 {
+		player.AllIn = true
+	}
 
 	return amount
 }

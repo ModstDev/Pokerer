@@ -142,3 +142,62 @@ func TestShowdownTie(t *testing.T) {
 		)
 	}
 }
+
+func TestBuildPots(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	game.Players = []Player{
+		{
+			ID:                "alice",
+			TotalContribution: 100,
+		},
+		{
+			ID:                "bob",
+			TotalContribution: 300,
+		},
+		{
+			ID:                "charlie",
+			TotalContribution: 500,
+		},
+	}
+
+	pots := game.BuildPots()
+
+	if len(pots) != 2 {
+		t.Fatalf(
+			"expected 2 pots, got %d",
+			len(pots),
+		)
+	}
+
+	if pots[0].Amount != 300 {
+		t.Fatalf(
+			"expected main pot 300, got %d",
+			pots[0].Amount,
+		)
+	}
+
+	if len(pots[0].EligiblePlayers) != 3 {
+		t.Fatalf(
+			"expected 3 eligible players, got %d",
+			len(pots[0].EligiblePlayers),
+		)
+	}
+
+	if pots[1].Amount != 400 {
+		t.Fatalf(
+			"expected side pot 400, got %d",
+			pots[1].Amount,
+		)
+	}
+
+	if len(pots[1].EligiblePlayers) != 2 {
+		t.Fatalf(
+			"expected 2 eligible players, got %d",
+			len(pots[1].EligiblePlayers),
+		)
+	}
+}

@@ -94,9 +94,8 @@ func (g *Game) call(player *Player) error {
 		return g.allIn(player)
 	}
 
-	player.Chips -= amount
-	player.Bet += amount
-	g.Pot += amount
+	g.contribute(player, amount)
+
 	player.Acted = true
 
 	return g.advanceAfterAction()
@@ -115,11 +114,9 @@ func (g *Game) bet(player *Player, amount int64) error {
 		return fmt.Errorf("bet exceeds available chips")
 	}
 
-	player.Chips -= amount
-	player.Bet += amount
+	g.contribute(player, amount)
 
 	g.CurrentBet = player.Bet
-	g.Pot += amount
 
 	if player.Chips == 0 {
 		player.AllIn = true
@@ -151,11 +148,9 @@ func (g *Game) raise(player *Player, amount int64) error {
 		return fmt.Errorf("raise exceeds available chips")
 	}
 
-	player.Chips -= additional
-	player.Bet = amount
+	g.contribute(player, additional)
 
 	g.CurrentBet = amount
-	g.Pot += additional
 
 	g.MinRaise = raiseAmount
 
@@ -176,15 +171,14 @@ func (g *Game) allIn(player *Player) error {
 	amount := player.Chips
 	newBet := player.Bet + amount
 
-	player.Chips = 0
-	player.Bet += newBet
+	g.contribute(player, amount)
+
 	player.AllIn = true
 
 	if newBet > g.CurrentBet {
 		raiseAmount := newBet - g.CurrentBet
 
 		g.CurrentBet = newBet
-		g.Pot += amount
 
 		if raiseAmount >= g.MinRaise {
 			g.MinRaise = raiseAmount
@@ -192,12 +186,9 @@ func (g *Game) allIn(player *Player) error {
 		} else {
 			player.Acted = true
 		}
-
-		return g.advanceAfterAction()
+	} else {
+		player.Acted = true
 	}
-
-	g.Pot += amount
-	player.Acted = true
 
 	return g.advanceAfterAction()
 }
