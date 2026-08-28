@@ -3,6 +3,7 @@ package table
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/ModstDev/Pokerer/internal/poker/game"
 )
@@ -13,6 +14,8 @@ type Table struct {
 
 	actions chan ActionRequest
 	done    chan struct{}
+
+	closeOnce sync.Once
 }
 
 type ActionRequest struct {
@@ -74,6 +77,10 @@ func (t *Table) findPlayer(playerID string) int {
 }
 
 func (t *Table) SubmitAction(ctx context.Context, request ActionRequest) error {
+	if request == (ActionRequest{}) {
+		return fmt.Errorf("action request is nil")
+	}
+
 	request.Result = make(chan error, 1)
 
 	select {
@@ -92,4 +99,10 @@ func (t *Table) SubmitAction(ctx context.Context, request ActionRequest) error {
 	case <-t.done:
 		return fmt.Errorf("table is closed")
 	}
+}
+
+func (t *Table) Close() {
+	t.closeOnce.Do(func() {
+		close(t.done)
+	})
 }
