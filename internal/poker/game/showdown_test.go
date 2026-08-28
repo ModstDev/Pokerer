@@ -15,7 +15,8 @@ func TestShowdown(t *testing.T) {
 				card(Ace, Spades),
 				card(Ace, Hearts),
 			},
-			Chips: 800,
+			Chips:             800,
+			TotalContribution: 200,
 		},
 		{
 			ID: "bob",
@@ -23,7 +24,8 @@ func TestShowdown(t *testing.T) {
 				card(King, Spades),
 				card(King, Hearts),
 			},
-			Chips: 800,
+			Chips:             800,
+			TotalContribution: 200,
 		},
 	}
 
@@ -38,26 +40,27 @@ func TestShowdown(t *testing.T) {
 	game.Pot = 400
 	game.State = StateShowdown
 
-	result, err := game.EvaluateShowdown()
+	payout, err := game.BuildPayout()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(result.Winners) != 1 {
+	if len(payout.Pots) != 1 {
 		t.Fatalf(
-			"expected one winner, got %d",
-			len(result.Winners),
+			"expected 1 pot, got %d",
+			len(payout.Pots),
 		)
 	}
 
-	if result.Winners[0] != 0 {
-		t.Fatalf(
-			"expected Alice to win, got player %d",
-			result.Winners[0],
-		)
+	if len(payout.Pots[0].Winners) != 1 {
+		t.Fatalf("expected one winner")
 	}
 
-	if err := game.Payout(result); err != nil {
+	if payout.Pots[0].Winners[0] != 0 {
+		t.Fatalf("expected Alice to win")
+	}
+
+	if err := game.ApplyPayout(payout); err != nil {
 		t.Fatal(err)
 	}
 
@@ -89,7 +92,8 @@ func TestShowdownTie(t *testing.T) {
 				card(Two, Clubs),
 				card(Three, Diamonds),
 			},
-			Chips: 800,
+			Chips:             800,
+			TotalContribution: 200,
 		},
 		{
 			ID: "bob",
@@ -97,7 +101,8 @@ func TestShowdownTie(t *testing.T) {
 				card(Four, Clubs),
 				card(Five, Diamonds),
 			},
-			Chips: 800,
+			Chips:             800,
+			TotalContribution: 200,
 		},
 	}
 
@@ -109,26 +114,33 @@ func TestShowdownTie(t *testing.T) {
 		card(Ten, Spades),
 	}
 
-	game.Pot = 401
+	game.Pot = 400
 	game.State = StateShowdown
 
-	result, err := game.EvaluateShowdown()
+	payout, err := game.BuildPayout()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(result.Winners) != 2 {
+	if len(payout.Pots) != 1 {
 		t.Fatalf(
-			"expected two winners, got %d",
-			len(result.Winners),
+			"expected 1 pot, got %d",
+			len(payout.Pots),
 		)
 	}
 
-	if err := game.Payout(result); err != nil {
+	if len(payout.Pots[0].Winners) != 2 {
+		t.Fatalf(
+			"expected two winners, got %d",
+			len(payout.Pots[0].Winners),
+		)
+	}
+
+	if err := game.ApplyPayout(payout); err != nil {
 		t.Fatal(err)
 	}
 
-	if game.Players[0].Chips != 1001 {
+	if game.Players[0].Chips != 1000 {
 		t.Fatalf(
 			"expected Alice to have 1001 chips, got %d",
 			game.Players[0].Chips,
@@ -198,6 +210,103 @@ func TestBuildPots(t *testing.T) {
 		t.Fatalf(
 			"expected 2 eligible players, got %d",
 			len(pots[1].EligiblePlayers),
+		)
+	}
+}
+
+func TestSidePotPayout(t *testing.T) {
+	game := NewGame(GameConfig{
+		SmallBlind: 10,
+		BigBlind:   20,
+	})
+
+	game.Players = []Player{
+		{
+			ID:                "alice",
+			Chips:             0,
+			TotalContribution: 100,
+			Cards: []Card{
+				card(Ace, Spades),
+				card(Ace, Hearts),
+			},
+		},
+		{
+			ID:                "bob",
+			Chips:             0,
+			TotalContribution: 300,
+			Cards: []Card{
+				card(King, Spades),
+				card(King, Hearts),
+			},
+		},
+		{
+			ID:                "charlie",
+			Chips:             0,
+			TotalContribution: 500,
+			Cards: []Card{
+				card(Queen, Spades),
+				card(Queen, Hearts),
+			},
+		},
+	}
+
+	game.CommunityCards = []Card{
+		card(Two, Clubs),
+		card(Seven, Diamonds),
+		card(Nine, Spades),
+		card(Five, Hearts),
+		card(Three, Clubs),
+	}
+
+	game.Pot = 900
+	game.State = StateShowdown
+
+	result, err := game.BuildPayout()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(result.Pots) != 2 {
+		t.Fatalf(
+			"expected 2 pots, got %d",
+			len(result.Pots),
+		)
+	}
+
+	if result.Pots[0].Winners[0] != 0 {
+		t.Fatalf(
+			"expected Alice to win main pot",
+		)
+	}
+
+	if result.Pots[1].Winners[0] != 1 {
+		t.Fatalf(
+			"expected Bob to win side pot",
+		)
+	}
+
+	if err := game.ApplyPayout(result); err != nil {
+		t.Fatal(err)
+	}
+
+	if game.Players[0].Chips != 300 {
+		t.Fatalf(
+			"expected Alice to receive 300, got %d",
+			game.Players[0].Chips,
+		)
+	}
+
+	if game.Players[1].Chips != 400 {
+		t.Fatalf(
+			"expected Bob to receive 400, got %d",
+			game.Players[1].Chips,
+		)
+	}
+
+	if game.Players[2].Chips != 0 {
+		t.Fatalf(
+			"expected Charlie to receive 0, got %d",
+			game.Players[2].Chips,
 		)
 	}
 }

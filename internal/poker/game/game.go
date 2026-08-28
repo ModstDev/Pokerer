@@ -373,38 +373,3 @@ func (g *Game) EvaluateShowdown() (ShowdownResult, error) {
 
 	return result, nil
 }
-
-func (g *Game) Payout(result ShowdownResult) error {
-	if g.State != StateShowdown {
-		return fmt.Errorf("game is not at showdown")
-	}
-
-	if len(result.Winners) == 0 {
-		return fmt.Errorf("no winners")
-	}
-
-	if g.Pot <= 0 {
-		return fmt.Errorf("pot is empty")
-	}
-
-	share := g.Pot / int64(len(result.Winners))
-	remainder := g.Pot % int64(len(result.Winners))
-
-	for i, winnerIndex := range result.Winners {
-		if winnerIndex < 0 || winnerIndex >= len(g.Players) {
-			return fmt.Errorf("invalid winner index %d", winnerIndex)
-		}
-
-		amount := share
-
-		if int64(i) < remainder {
-			amount++
-		}
-
-		g.Players[winnerIndex].Chips += amount
-	}
-
-	g.Pot = 0
-
-	return nil
-}
