@@ -475,7 +475,6 @@ func TestDealerRotation(t *testing.T) {
 			Seat:  i,
 			Chips: 1000,
 		})
-
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -488,11 +487,7 @@ func TestDealerRotation(t *testing.T) {
 		)
 	}
 
-	game.State = StateShowdown
-
-	if err := game.FinishHand(); err != nil {
-		t.Fatal(err)
-	}
+	game.rotateDealer()
 
 	if game.DealerPosition != 1 {
 		t.Fatalf(
@@ -501,15 +496,20 @@ func TestDealerRotation(t *testing.T) {
 		)
 	}
 
-	game.State = StateShowdown
-
-	if err := game.FinishHand(); err != nil {
-		t.Fatal(err)
-	}
+	game.rotateDealer()
 
 	if game.DealerPosition != 2 {
 		t.Fatalf(
 			"expected dealer at 2, got %d",
+			game.DealerPosition,
+		)
+	}
+
+	game.rotateDealer()
+
+	if game.DealerPosition != 0 {
+		t.Fatalf(
+			"expected dealer at 0, got %d",
 			game.DealerPosition,
 		)
 	}

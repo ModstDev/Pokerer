@@ -220,12 +220,19 @@ func (g *Game) rotateDealer() {
 		return
 	}
 
+	current := g.dealerIndex()
+
+	if current == -1 {
+		g.DealerPosition = g.Players[0].Seat
+		return
+	}
+
 	for i := 1; i <= len(g.Players); i++ {
-		position := nextPosition(g.DealerPosition, i, len(g.Players))
+		position := nextPosition(current, i, len(g.Players))
 
 		player := &g.Players[position]
 
-		if !player.Folded && player.Chips > 0 {
+		if player.Chips > 0 {
 			g.DealerPosition = position
 			return
 		}

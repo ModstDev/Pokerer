@@ -14,6 +14,7 @@ const (
 	StateTurn     State = "turn"
 	StateRiver    State = "river"
 	StateShowdown State = "showdown"
+	StateFinished State = "finished"
 )
 
 type Position uint8
@@ -96,6 +97,10 @@ func (g *Game) StartHand(r *rand.Rand) error {
 
 	if len(g.Players) < 2 {
 		return fmt.Errorf("at least two players are required")
+	}
+
+	if g.dealerIndex() == -1 {
+		g.DealerPosition = g.Players[0].Seat
 	}
 
 	g.CurrentPlayer = 0
@@ -265,16 +270,22 @@ func (g *Game) CurrentPlayerID() string {
 }
 
 func (g *Game) blindPositions() (int, int) {
+	dealer := g.dealerIndex()
+
+	if dealer == -1 {
+		return -1, -1
+	}
+
 	playerCount := len(g.Players)
 
 	if playerCount == 2 {
-		// Dealer is small blind.
-		return g.DealerPosition, nextPosition(g.DealerPosition, 1, playerCount)
+		return dealer,
+			nextPosition(dealer, 1, playerCount)
 	}
 
-	smallBlind := nextPosition(g.DealerPosition, 1, playerCount)
+	smallBlind := nextPosition(dealer, 1, playerCount)
 
-	bigBlind := nextPosition(g.DealerPosition, 2, playerCount)
+	bigBlind := nextPosition(dealer, 2, playerCount)
 
 	return smallBlind, bigBlind
 }
@@ -297,18 +308,6 @@ func (g *Game) postBlind(playerIndex int, amount int64) int64 {
 	}
 
 	return amount
-}
-
-func (g *Game) FinishHand() error {
-	if g.State != StateShowdown {
-		return fmt.Errorf("hand is not at showdown")
-	}
-
-	g.rotateDealer()
-
-	g.State = StateWaiting
-
-	return nil
 }
 
 func (g *Game) EvaluateShowdown() (ShowdownResult, error) {
@@ -372,4 +371,72 @@ func (g *Game) EvaluateShowdown() (ShowdownResult, error) {
 	}
 
 	return result, nil
+}
+
+func (g *Game) resetHand() {
+	for i := range g.Players {
+		g.Players[i].Cards = nil
+		g.Players[i].Bet = 0
+		g.Players[i].Acted = false
+		g.Players[i].TotalContribution = 0
+		g.Players[i].Folded = false
+		g.Players[i].AllIn = false
+	}
+
+	g.CommunityCards = g.CommunityCards[:0]
+	g.Pot = 0
+	g.CurrentBet = 0
+	g.MinRaise = g.Config.BigBlind
+}
+
+func (g *Game) removeBustedPlayers() {
+	players := g.Players
+
+	remaining := make([]Player, 0, len(players))
+
+	for _, player := range players {
+		if player.Chips > 0 {
+			remaining = append(remaining, player)
+		}
+	}
+
+	g.Players = remaining
+}
+
+func (g *Game) dealerIndex() int {
+	for i, player := range g.Players {
+		if player.Seat == g.DealerPosition {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (g *Game) FinishHand() error {
+	if g.State != StateShowdown {
+		return fmt.Errorf("game is not at showdown")
+	}
+
+	payout, err := g.BuildPayout()
+	if err != nil {
+		return fmt.Errorf("building payout: %w", err)
+	}
+
+	if err := g.ApplyPayout(payout); err != nil {
+		return fmt.Errorf("applying payout: %w", err)
+	}
+
+	g.resetHand()
+
+	g.removeBustedPlayers()
+
+	if len(g.Players) >= 2 {
+		g.rotateDealer()
+		g.State = StateWaiting
+	} else {
+		g.State = StateFinished
+	}
+
+	return nil
 }
