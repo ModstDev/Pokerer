@@ -311,3 +311,101 @@ func (g *Game) FinishHand() error {
 
 	return nil
 }
+
+func (g *Game) EvaluateShowdown() (ShowdownResult, error) {
+	if g.State != StateShowdown {
+		return ShowdownResult{}, fmt.Errorf("game is not at showdown")
+	}
+
+	if len(g.CommunityCards) != 5 {
+		return ShowdownResult{}, fmt.Errorf("expected 5 community cards, got %d", len(g.CommunityCards))
+	}
+
+	result := ShowdownResult{
+		Winners: make([]int, 0),
+		Hands:   make(map[int]HandValue),
+	}
+
+	var best HandValue
+	first := true
+
+	for i := range g.Players {
+		player := &g.Players[i]
+
+		if player.Folded {
+			continue
+		}
+
+		if len(player.Cards) != 2 {
+			return ShowdownResult{}, fmt.Errorf("player %s does not have 2 cards", player.ID)
+		}
+
+		cards := make([]Card, 0, 7)
+		cards = append(cards, player.Cards...)
+		cards = append(cards, g.CommunityCards...)
+
+		hand, err := EvaluateSeven(cards)
+		if err != nil {
+			return ShowdownResult{}, fmt.Errorf("evaluating player %s: %w", player.ID, err)
+		}
+
+		result.Hands[i] = hand
+
+		if first {
+			best = hand
+			result.Winners = []int{i}
+			first = false
+			continue
+		}
+
+		comparison := CompareHands(hand, best)
+
+		if comparison > 0 {
+			best = hand
+			result.Winners = []int{i}
+		} else if comparison == 0 {
+			result.Winners = append(result.Winners, i)
+		}
+	}
+
+	if len(result.Winners) == 0 {
+		return ShowdownResult{}, fmt.Errorf("no eligible players for showdown")
+	}
+
+	return result, nil
+}
+
+func (g *Game) Payout(result ShowdownResult) error {
+	if g.State != StateShowdown {
+		return fmt.Errorf("game is not at showdown")
+	}
+
+	if len(result.Winners) == 0 {
+		return fmt.Errorf("no winners")
+	}
+
+	if g.Pot <= 0 {
+		return fmt.Errorf("pot is empty")
+	}
+
+	share := g.Pot / int64(len(result.Winners))
+	remainder := g.Pot % int64(len(result.Winners))
+
+	for i, winnerIndex := range result.Winners {
+		if winnerIndex < 0 || winnerIndex >= len(g.Players) {
+			return fmt.Errorf("invalid winner index %d", winnerIndex)
+		}
+
+		amount := share
+
+		if int64(i) < remainder {
+			amount++
+		}
+
+		g.Players[winnerIndex].Chips += amount
+	}
+
+	g.Pot = 0
+
+	return nil
+}

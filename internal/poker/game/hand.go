@@ -29,6 +29,11 @@ type rankGroup struct {
 	count int
 }
 
+type ShowdownResult struct {
+	Winners []int
+	Hands   map[int]HandValue
+}
+
 func CompareHands(a, b HandValue) int {
 	if a.Rank > b.Rank {
 		return 1
