@@ -11,7 +11,7 @@ func TestManagerAddAndGet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	manager := NewManager(ctx)
+	manager := NewManager(ctx, nil)
 
 	g := game.NewGame(game.GameConfig{
 		SmallBlind: 10,
@@ -39,7 +39,7 @@ func TestManagerRejectsDuplicateTable(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	manager := NewManager(ctx)
+	manager := NewManager(ctx, nil)
 
 	g1 := game.NewGame(game.GameConfig{
 		SmallBlind: 10,
@@ -64,7 +64,7 @@ func TestManagerRemove(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	manager := NewManager(ctx)
+	manager := NewManager(ctx, nil)
 
 	g := game.NewGame(game.GameConfig{
 		SmallBlind: 10,

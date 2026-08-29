@@ -10,6 +10,7 @@ import (
 
 	"github.com/ModstDev/Pokerer/internal/database"
 	generated "github.com/ModstDev/Pokerer/internal/database/generated"
+	"github.com/ModstDev/Pokerer/internal/poker/game"
 	"github.com/ModstDev/Pokerer/internal/repository"
 )
 
@@ -283,4 +284,38 @@ func (s *Service) GetTableDetails(ctx context.Context, tableID string) (TableDet
 		Table:   table,
 		Players: players,
 	}, nil
+}
+
+func (s *Service) LoadGame(ctx context.Context, tableID string) (*game.Game, error) {
+	table, err := s.tables.GetByID(ctx, tableID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("table not found")
+		}
+
+		return nil, fmt.Errorf("getting poker table: %w", err)
+	}
+
+	players, err := s.tables.ListPlayers(ctx, tableID)
+	if err != nil {
+		return nil, fmt.Errorf("getting table players: %w", err)
+	}
+
+	g := game.NewGame(game.GameConfig{
+		SmallBlind: table.SmallBlind,
+		BigBlind:   table.BigBlind,
+	})
+
+	for _, player := range players {
+		err := g.AddPlayer(game.Player{
+			ID:    player.UserID,
+			Seat:  int(player.SeatNumber),
+			Chips: player.Chips,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("adding player %s to game: %w", player.UserID, err)
+		}
+	}
+
+	return g, nil
 }
