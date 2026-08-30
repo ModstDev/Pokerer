@@ -52,5 +52,20 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/tables/{id}/join", protected(http.HandlerFunc(s.joinTable)))
 	mux.Handle("POST /api/v1/tables/{id}/leave", protected(http.HandlerFunc(s.leaveTable)))
 
-	return mux
+	return cors(mux)
+}
+
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

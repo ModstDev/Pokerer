@@ -213,9 +213,9 @@ func findFreeSeat(players []generated.TablePlayer, maxPlayers int) (int, error) 
 }
 
 func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string) error {
-	runtimeTable, ok := s.manager.Get(tableID)
-	if !ok {
-		return errors.New("table is not running")
+	runtimeTable, err := s.manager.GetOrCreate(ctx, tableID)
+	if err != nil {
+		return fmt.Errorf("loading runtime table: %w", err)
 	}
 
 	chips, err := runtimeTable.SubmitLeave(ctx, table.LeaveRequest{
@@ -230,17 +230,13 @@ func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string)
 		wallets := s.wallets.WithTx(tx)
 
 		// Lock table first
-		table, err := tables.GetByID(ctx, tableID)
+		_, err := tables.GetByID(ctx, tableID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.New("table not found")
 			}
 
 			return fmt.Errorf("getting table: %w", err)
-		}
-
-		if table.Status != "waiting" {
-			return errors.New("cannot leave an active table")
 		}
 
 		// Lock the player row.

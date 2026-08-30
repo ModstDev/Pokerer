@@ -35,11 +35,12 @@ type LeaveResult struct {
 
 func NewTable(id string, g *game.Game) *Table {
 	return &Table{
-		ID:      id,
-		Game:    g,
-		actions: make(chan ActionRequest),
-		leaves:  make(chan LeaveRequest),
-		done:    make(chan struct{}),
+		ID:        id,
+		Game:      g,
+		actions:   make(chan ActionRequest),
+		leaves:    make(chan LeaveRequest),
+		done:      make(chan struct{}),
+		closeOnce: sync.Once{},
 	}
 }
 
@@ -144,13 +145,6 @@ func (t *Table) SubmitLeave(ctx context.Context, request LeaveRequest) (int64, e
 }
 
 func (t *Table) handleLeave(request LeaveRequest) {
-	if t.Game.State != game.StateWaiting {
-		request.Result <- LeaveResult{
-			Err: fmt.Errorf("cannot leave an active table"),
-		}
-		return
-	}
-
 	playerIndex := t.findPlayer(request.PlayerID)
 
 	if playerIndex == -1 {
@@ -161,6 +155,11 @@ func (t *Table) handleLeave(request LeaveRequest) {
 	}
 
 	player := t.Game.Players[playerIndex]
+
+	if !player.Folded {
+		player.Folded = true
+	}
+
 	chips := player.Chips
 
 	t.Game.Players = append(t.Game.Players[:playerIndex], t.Game.Players[playerIndex+1:]...)

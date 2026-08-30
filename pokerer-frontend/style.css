@@ -1,0 +1,307 @@
+:root {
+  --bg: #0b0f12;
+  --panel: #151b20;
+  --border: #29323a;
+  --text: #f2f4f5;
+  --muted: #8d98a1;
+  --green: #27c77a;
+  --red: #e86d6d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+header {
+  height: 64px;
+  padding: 0 30px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  color: white;
+  text-decoration: none;
+  font-size: 21px;
+  font-weight: bold;
+}
+
+#nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 25px;
+}
+
+button,
+.button {
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 15px;
+  background: var(--green);
+  color: #07140d;
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:hover,
+.button:hover {
+  opacity: .9;
+}
+
+button.secondary,
+.button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+button.danger {
+  background: transparent;
+  border: 1px solid #633939;
+  color: var(--red);
+}
+
+h1 {
+  font-size: 42px;
+  margin: 5px 0 10px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+p {
+  color: var(--muted);
+}
+
+.hero {
+  margin-bottom: 30px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.card,
+.form-card,
+.side-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.card h2 {
+  font-size: 19px;
+}
+
+.stakes {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+.stakes span {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0 5px;
+}
+
+.info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.info strong {
+  color: var(--text);
+}
+
+.full {
+  width: 100%;
+}
+
+.form-card {
+  max-width: 400px;
+  margin: 50px auto;
+}
+
+.form-card h1 {
+  font-size: 32px;
+  margin-bottom: 25px;
+}
+
+label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 15px;
+}
+
+input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #0c1115;
+  color: white;
+}
+
+.error {
+  background: #321a1a;
+  border: 1px solid #673737;
+  color: #ffaaaa;
+  padding: 12px;
+  border-radius: 7px;
+  margin-bottom: 20px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 25px;
+}
+
+.table-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 18px;
+}
+
+.poker-table {
+  min-height: 550px;
+  border: 10px solid #3c2818;
+  border-radius: 25px;
+  background: #0c6540;
+  position: relative;
+}
+
+.pot {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.pot strong {
+  display: block;
+  font-size: 25px;
+}
+
+.community {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+}
+
+.community-card {
+  width: 48px;
+  height: 65px;
+  background: white;
+  color: #111;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.seat {
+  position: absolute;
+  text-align: center;
+  min-width: 100px;
+}
+
+.seat-0 { left: 50%; bottom: 5%; transform: translateX(-50%); }
+.seat-1 { left: 5%; bottom: 25%; }
+.seat-2 { left: 5%; top: 22%; }
+.seat-3 { left: 50%; top: 5%; transform: translateX(-50%); }
+.seat-4 { right: 5%; top: 22%; }
+.seat-5 { right: 5%; bottom: 25%; }
+
+.player {
+  background: #09100eee;
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.chips {
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.player-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.balance {
+  color: var(--muted);
+}
+
+.balance strong {
+  color: var(--green);
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 550px) {
+  header {
+    padding: 0 15px;
+  }
+
+  main {
+    padding: 25px 15px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .poker-table {
+    min-height: 450px;
+  }
+}
