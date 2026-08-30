@@ -11,6 +11,7 @@ import (
 	"github.com/ModstDev/Pokerer/internal/database"
 	generated "github.com/ModstDev/Pokerer/internal/database/generated"
 	"github.com/ModstDev/Pokerer/internal/poker/game"
+	"github.com/ModstDev/Pokerer/internal/poker/table"
 	"github.com/ModstDev/Pokerer/internal/repository"
 )
 
@@ -18,6 +19,7 @@ type Service struct {
 	db      *sql.DB
 	tables  *repository.PokerTableRepository
 	wallets *repository.WalletRepository
+	manager *table.Manager
 }
 
 func NewService(db *sql.DB, tables *repository.PokerTableRepository, wallets *repository.WalletRepository) *Service {
@@ -200,8 +202,19 @@ func findFreeSeat(players []generated.TablePlayer, maxPlayers int) (int, error) 
 	return 0, fmt.Errorf("no free seat")
 }
 
-// TODO
 func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string) error {
+	runtimeTable, ok := s.manager.Get(tableID)
+	if !ok {
+		return errors.New("table is not running")
+	}
+
+	chips, err := runtimeTable.SubmitLeave(ctx, table.LeaveRequest{
+		PlayerID: userID,
+	})
+	if err != nil {
+		return fmt.Errorf("leaving runtime table: %w", err)
+	}
+
 	return database.WithTransaction(ctx, s.db, func(tx *sql.Tx) error {
 		tables := s.tables.WithTx(tx)
 		wallets := s.wallets.WithTx(tx)
@@ -221,7 +234,7 @@ func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string)
 		}
 
 		// Lock the player row.
-		player, err := tables.GetPlayer(ctx, tableID, userID)
+		_, err = tables.GetPlayer(ctx, tableID, userID)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.New("user is not at this table")
@@ -240,7 +253,7 @@ func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string)
 			return fmt.Errorf("getting wallet: %w", err)
 		}
 
-		newBalance := wallet.Balance + player.Chips
+		newBalance := wallet.Balance + chips
 
 		if err := wallets.UpdateBalance(ctx, wallet.ID, newBalance); err != nil {
 			return fmt.Errorf("updating wallet: %w", err)
@@ -250,7 +263,7 @@ func (s *Service) LeaveTable(ctx context.Context, tableID string, userID string)
 			ID:           uuid.New().String(),
 			WalletID:     wallet.ID,
 			Type:         "table_leave",
-			Amount:       player.Chips,
+			Amount:       chips,
 			BalanceAfter: newBalance,
 		},
 		); err != nil {
@@ -318,4 +331,8 @@ func (s *Service) LoadGame(ctx context.Context, tableID string) (*game.Game, err
 	}
 
 	return g, nil
+}
+
+func (s *Service) SetTableManager(manager *table.Manager) {
+	s.manager = manager
 }

@@ -1,12 +1,14 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/ModstDev/Pokerer/internal/auth"
 	"github.com/ModstDev/Pokerer/internal/auth/token"
 	database "github.com/ModstDev/Pokerer/internal/database/generated"
 	"github.com/ModstDev/Pokerer/internal/poker"
+	"github.com/ModstDev/Pokerer/internal/poker/table"
 	"github.com/ModstDev/Pokerer/internal/repository"
 	"github.com/ModstDev/Pokerer/internal/wallet"
 )
@@ -34,6 +36,11 @@ func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
 	walletRepository := repository.NewWalletRepository(queries)
 	tableRepository := repository.NewPokerTableRepository(queries)
 
+	pokerService := poker.NewService(db, tableRepository, walletRepository)
+	tableManager := table.NewManager(context.Background(), pokerService)
+
+	pokerService.SetTableManager(tableManager)
+
 	return &App{
 		DB: db,
 
@@ -42,7 +49,7 @@ func New(db *sql.DB, jwtSecret, jwtIssuer string) *App {
 
 		Wallet: wallet.NewService(db, walletRepository),
 		Auth:   auth.NewService(db, userRepository, walletRepository),
-		Poker:  poker.NewService(db, tableRepository, walletRepository),
+		Poker:  pokerService,
 
 		Token: token.NewJWT(jwtSecret, jwtIssuer),
 	}
