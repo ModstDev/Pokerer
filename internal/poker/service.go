@@ -96,7 +96,7 @@ func (s *Service) JoinTable(ctx context.Context, tableID string, userID string, 
 		return errors.New("buy-ing must be positive")
 	}
 
-	return database.WithTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	err := database.WithTransaction(ctx, s.db, func(tx *sql.Tx) error {
 		tables := s.tables.WithTx(tx)
 		wallets := s.wallets.WithTx(tx)
 
@@ -184,6 +184,16 @@ func (s *Service) JoinTable(ctx context.Context, tableID string, userID string, 
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// Make sure the runtime table exists after the DB transaction succeeds.
+	if _, err := s.manager.GetOrCreate(ctx, tableID); err != nil {
+		return fmt.Errorf("loading runtime table: %w", err)
+	}
+
+	return nil
 }
 
 func findFreeSeat(players []generated.TablePlayer, maxPlayers int) (int, error) {
